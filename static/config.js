@@ -1,0 +1,2 @@
+var MQTT_HOST = '<HOST_NAME>';
+var MQTT_PORT = 0000;

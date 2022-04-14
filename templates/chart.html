@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anomaly Analysis</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"
+      integrity="sha512-QSkVNOCYLtj73J4hbmVoOV6KVZuMluZlioC+trLpewV8qMjsWqlIQvkn1KGX2StWvPMdWGBqim1xlC8krl1EKQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script type="text/javascript" src="{% static './config.js' %}"></script>
+
+    <script>
+      let numbers = [0];
+      let label = [0];
+
+      const connectUrl = `ws://${MQTT_HOST}:${MQTT_PORT}`;
+      const client = mqtt.connect(connectUrl);
+
+      client.on("connect", function () {
+        client.subscribe("anomaly_data_js_topic_cagatay_curuk"); // subscribe to topic
+      });
+
+      client.on("message", (topic, message) => {
+        data = JSON.parse(message.toString());
+
+        if (myChart.data != null) {
+          if (myChart.data.labels.length > 20) {
+            myChart.data.labels.shift();
+            myChart.data.datasets[0].data.shift();
+          }
+
+          myChart.data.labels.push(new Date().toLocaleTimeString());
+          myChart.data.datasets[0].data.push(data["anomaly_data"]);
+          myChart.update();
+        }
+        myChart.update();
+      });
+    </script>
+  </head>
+  <body>
+    <canvas id="myChart" width="1350" height="600"></canvas>
+    <script>
+      const ctx = document.getElementById("myChart").getContext("2d");
+
+      const myChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: label,
+          datasets: [
+            {
+              label: "Anomaly",
+              data: numbers,
+              pointStyle: "circle",
+              pointRadius: 10,
+              pointHoverRadius: 10,
+              pointBackgroundColor: (ctx) => {
+                if (ctx.parsed.y >= 0.5 || ctx.parsed.y <= 0.3) {
+                  return "red";
+                } else {
+                  return "green";
+                }
+              },
+              stepped: true,
+              segment: {
+                borderColor: "black",
+              },
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          interaction: {
+            intersect: false,
+            axis: "x",
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: "Anomaly Analysis",
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
